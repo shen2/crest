@@ -1,0 +1,16 @@
+{
+    "name": "shen2/crest",
+    "description": "Restful interface for Cassandra",
+    "require": {
+        "slim/slim": "2.*",
+        "duoshuo/php-cassandra": "dev-master"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Shen Zhenyu",
+            "email": "zhenyupku@gmail.com"
+        }
+    ]
+}
+
