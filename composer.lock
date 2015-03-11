@@ -1,0 +1,144 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "hash": "0f11097f7dacbff39b26e84017bc7da9",
+    "packages": [
+        {
+            "name": "duoshuo/php-cassandra",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/duoshuo/php-cassandra.git",
+                "reference": "fbeb30e4d58a6020944d529b24a31b087a7fb85e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/duoshuo/php-cassandra/zipball/fbeb30e4d58a6020944d529b24a31b087a7fb85e",
+                "reference": "fbeb30e4d58a6020944d529b24a31b087a7fb85e",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Cassandra\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Evseev Nikolay",
+                    "email": "evseevnn@gmail.com"
+                },
+                {
+                    "name": "Shen Zhenyu",
+                    "email": "zhenyupku@gmail.com"
+                }
+            ],
+            "description": "Cassandra client library for PHP, which support Protocol v3 and asynchronous request",
+            "time": "2015-03-10 08:48:51"
+        },
+        {
+            "name": "shen2/fluent-cql",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/shen2/FluentCQL.git",
+                "reference": "388b9c9b8a8b8e2726f4d3c98c9be03d68a910ec"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/shen2/FluentCQL/zipball/388b9c9b8a8b8e2726f4d3c98c9be03d68a910ec",
+                "reference": "388b9c9b8a8b8e2726f4d3c98c9be03d68a910ec",
+                "shasum": ""
+            },
+            "require": {
+                "duoshuo/php-cassandra": "dev-master",
+                "php": ">=5.4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "FluentCQL\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Shen Zhenyu",
+                    "email": "zhenyupku@gmail.com"
+                }
+            ],
+            "description": "an php CQL building library",
+            "time": "2015-03-11 09:37:33"
+        },
+        {
+            "name": "slim/slim",
+            "version": "2.6.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/slimphp/Slim.git",
+                "reference": "20a02782f76830b67ae56a5c08eb1f563c351a37"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/slimphp/Slim/zipball/20a02782f76830b67ae56a5c08eb1f563c351a37",
+                "reference": "20a02782f76830b67ae56a5c08eb1f563c351a37",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "suggest": {
+                "ext-mcrypt": "Required for HTTP cookie encryption"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Slim": "."
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Josh Lockhart",
+                    "email": "info@joshlockhart.com",
+                    "homepage": "http://www.joshlockhart.com/"
+                }
+            ],
+            "description": "Slim Framework, a PHP micro framework",
+            "homepage": "http://github.com/codeguy/Slim",
+            "keywords": [
+                "microframework",
+                "rest",
+                "router"
+            ],
+            "time": "2015-03-08 18:41:17"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "duoshuo/php-cassandra": 20,
+        "shen2/fluent-cql": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}
