@@ -9,10 +9,25 @@ $app = new \Slim\App(array(
 
 $db = new Cassandra\Connection(['127.0.0.1']);
 
-$app->add(function($request, $response, $next){
-	$next($request, $response);
-	
-	return $response->withHeader('Content-type', 'application/json');
+class JsonResponse extends Http\Response{
+
+	public function json($json){
+		return $this->write(json_encode($json));
+	}
+}
+
+$app['response'] = $app->factory(function ($c) {
+	$headers = new Http\Headers(['Content-Type' => 'application/json']);
+	$cookies = new Http\Cookies([], [
+			'expires' => $c['settings']['cookies.lifetime'],
+			'path' => $c['settings']['cookies.path'],
+			'domain' => $c['settings']['cookies.domain'],
+			'secure' => $c['settings']['cookies.secure'],
+			'httponly' => $c['settings']['cookies.httponly'],
+			]);
+	$response = new JsonResponse(200, $headers, $cookies);
+
+	return $response->withProtocolVersion($c['settings']['http.version']);
 });
 
 $app['errorHandler'] = function ($c){
@@ -30,9 +45,23 @@ $app['errorHandler'] = function ($c){
 		
 		return $response
                 ->withStatus(500)
-                ->withHeader('Content-type', 'application/json')
                 ->withBody(new Slim\Http\Body(fopen('php://temp', 'r+')))
-                ->write(json_encode($json));
+                ->json($json);
+	};
+	return $handler;
+};
+
+$app['notFoundHandler'] = function ($c){
+	$handler = function (Psr\Http\Message\RequestInterface $request, Psr\Http\Message\ResponseInterface $response)
+	{
+		$json = [
+			'message'=> 'Not Found',
+		];
+
+		return $response
+			->withStatus(404)
+			->withBody(new Slim\Http\Body(fopen('php://temp', 'r+')))
+			->json($json);
 	};
 	return $handler;
 };
@@ -42,7 +71,7 @@ $app->get('/{keyspace}/query', function ($request, $response, $args) use ($app, 
 	$cql = $request->getQueryParams('cql');
 	$rows = $db->querySync($cql)->fetchAll();
 	
-	$response->write(json_encode($rows->toArray()));
+	$response->json($rows->toArray());
 });
 
 $app->get('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
@@ -59,7 +88,8 @@ $app->get('/{keyspace}/{table}', function ($request, $response, $args) use ($app
 		$select->where(implode(' AND ', $conditions));
 	}
 	
-	$preparedData = $db->prepare($select->assemble());
+	$preparedData = $select->prepare();
+	
 	$bind = [];
 	$index = 0;
 	foreach($params as $value){
@@ -69,7 +99,7 @@ $app->get('/{keyspace}/{table}', function ($request, $response, $args) use ($app
 	
 	$rows = $db->executeSync($preparedData['id'], $bind)->fetchAll();
 	
-	$response->write(json_encode($rows->toArray()));
+	$response->json($rows->toArray());
 });
 
 $app->patch('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
@@ -85,11 +115,10 @@ $app->patch('/{keyspace}/{table}', function ($request, $response, $args) use ($a
 	foreach($params as $columnName => $value)
 		$conditions[] = $columnName . ' = ?';
 	
-	$query = FluentCQL\Query::update($args['table'])
+	$preparedData = FluentCQL\Query::update($args['table'])
 		->set(implode(', ', $assignments))
-		->where(implode(' AND ', $conditions));
-	
-	$preparedData = $db->prepare($query->assemble());
+		->where(implode(' AND ', $conditions))
+		->prepare();
 	
 	$bind = [];
 	$index = 0;
@@ -104,18 +133,17 @@ $app->patch('/{keyspace}/{table}', function ($request, $response, $args) use ($a
 	
 	$result = $db->executeSync($preparedData['id'], $bind);
 	
-	$response->write(json_encode($result->getData()));
+	$response->json($result->getData());
 });
 
 $app->post('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
 	$db->setKeyspace($args['keyspace']);
 	$data = $request->getParsedBody();
 	
-	$query = FluentCQL\Query::insertInto($args['table'])
+	$preparedData = FluentCQL\Query::insertInto($args['table'])
 		->clause('(' . \implode(', ', \array_keys($data)) . ')')
-		->values('(' . \implode(', ', \array_fill(0, count($data), '?')) . ')');
-	
-	$preparedData = $db->prepare($query->assemble());
+		->values('(' . \implode(', ', \array_fill(0, count($data), '?')) . ')')
+		->prepare();
 	
 	$bind = [];
 	$index = 0;
@@ -126,7 +154,7 @@ $app->post('/{keyspace}/{table}', function ($request, $response, $args) use ($ap
 	
 	$result = $db->executeSync($preparedData['id'], $bind);
 	
-	$response->write(json_encode($result->getData()));
+	$response->json($result->getData());
 });
 
 $app->delete('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
@@ -137,9 +165,9 @@ $app->delete('/{keyspace}/{table}', function ($request, $response, $args) use ($
 	foreach($params as $columnName => $value)
 		$conditions[] = $columnName . ' = ?';
 	
-	$select = FluentCQL\Query::delete()->from($args['table']);
-	
-	$preparedData = $db->prepare($select->assemble());
+	$preparedData = FluentCQL\Query::delete()->from($args['table'])
+		->where(implode(' AND ', $conditions))
+		->prepare();
 	$bind = [];
 	$index = 0;
 	foreach($params as $value){
@@ -149,7 +177,7 @@ $app->delete('/{keyspace}/{table}', function ($request, $response, $args) use ($
 	
 	$result = $db->executeSync($preparedData['id'], $bind);
 	
-	$response->write(json_encode($result->getData()));
+	$response->json($result->getData());
 });
 
 $app->run();
