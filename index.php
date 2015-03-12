@@ -9,20 +9,11 @@ $app = new \Slim\App(array(
 
 $db = new Cassandra\Connection(['127.0.0.1']);
 
-/*
-class JsonHeaderMiddleware extends \Slim\Middleware
-{
-	public function call(){
-		$app = $this->app;
-
-		$this->next->call();
-
-		$response->headers['Content-Type'] = 'application/json';
-	}
-}
-
-$app->add(new \JsonHeaderMiddleware());
-*/
+$app->add(function($request, $response, $next){
+	$next($request, $response);
+	
+	return $response->withHeader('Content-type', 'application/json');
+});
 
 $app['errorHandler'] = function ($c){
 	$handler = function (Psr\Http\Message\RequestInterface $request, Psr\Http\Message\ResponseInterface $response, \Exception $e)
