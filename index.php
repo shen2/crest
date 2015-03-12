@@ -1,7 +1,7 @@
 <?php
 require 'vendor/autoload.php';
 
-$app = new \Slim\Slim(array(
+$app = new \Slim\App(array(
 	'debug'=> false,
 	'mode' => 'development',
 	'http.version' => '1.1'
@@ -9,6 +9,7 @@ $app = new \Slim\Slim(array(
 
 $db = new Cassandra\Connection(['127.0.0.1']);
 
+/*
 class JsonHeaderMiddleware extends \Slim\Middleware
 {
 	public function call(){
@@ -16,39 +17,48 @@ class JsonHeaderMiddleware extends \Slim\Middleware
 
 		$this->next->call();
 
-		$app->response->headers['Content-Type'] = 'application/json';
+		$response->headers['Content-Type'] = 'application/json';
 	}
 }
 
 $app->add(new \JsonHeaderMiddleware());
+*/
 
-$app->error(function (\Exception $e) use ($app) {
-	$json = [
-		'type' => get_class($e),
-		'code' => $e->getCode(),
-		'message'=>$e->getMessage(),
-	];
-	
-	//$json['file'] = $e->getFile();
-	//$json['line'] = $e->getLine();
-	//$json['trace'] = $e->getTrace();
-	
-	$app->response->write(json_encode($json));
-});
+$app['errorHandler'] = function ($c){
+	$handler = function (Psr\Http\Message\RequestInterface $request, Psr\Http\Message\ResponseInterface $response, \Exception $e)
+	{
+		$json = [
+			'type' => get_class($e),
+			'code' => $e->getCode(),
+			'message'=>$e->getMessage(),
+		];
+		
+		//$json['file'] = $e->getFile();
+		//$json['line'] = $e->getLine();
+		//$json['trace'] = $e->getTrace();
+		
+		return $response
+                ->withStatus(500)
+                ->withHeader('Content-type', 'application/json')
+                ->withBody(new Slim\Http\Body(fopen('php://temp', 'r+')))
+                ->write(json_encode($json));
+	};
+	return $handler;
+};
 
-$app->get('/:keyspace/query', function ($keyspace) use ($app, $db){
-	$db->setKeyspace($keyspace);
-	$cql = $app->request->get('cql');
+$app->get('/{keyspace}/query', function ($request, $response, $args) use ($app, $db){
+	$db->setKeyspace($args['keyspace']);
+	$cql = $request->getQueryParams('cql');
 	$rows = $db->querySync($cql)->fetchAll();
 	
-	$app->response->write(json_encode($rows->toArray()));
+	$response->write(json_encode($rows->toArray()));
 });
 
-$app->get('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
-	$db->setKeyspace($keyspace);
-	$params = $app->request->get();
+$app->get('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
+	$db->setKeyspace($args['keyspace']);
+	$params = $request->getQueryParams();
 	
-	$select = FluentCQL\Query::select('*')->from($table);
+	$select = FluentCQL\Query::select('*')->from($args['table']);
 	
 	if (!empty($params)){
 		$conditions = [];
@@ -68,13 +78,13 @@ $app->get('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
 	
 	$rows = $db->executeSync($preparedData['id'], $bind)->fetchAll();
 	
-	$app->response->write(json_encode($rows->toArray()));
+	$response->write(json_encode($rows->toArray()));
 });
 
-$app->patch('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
-	$db->setKeyspace($keyspace);
-	$params = $app->request->get();
-	$data = $app->request->patch();
+$app->patch('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
+	$db->setKeyspace($args['keyspace']);
+	$params = $request->getQueryParams();
+	$data = $request->getParsedBody();
 	
 	$assignments = [];
 	foreach($data as $columnName => $value)
@@ -84,7 +94,7 @@ $app->patch('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
 	foreach($params as $columnName => $value)
 		$conditions[] = $columnName . ' = ?';
 	
-	$query = FluentCQL\Query::update($table)
+	$query = FluentCQL\Query::update($args['table'])
 		->set(implode(', ', $assignments))
 		->where(implode(' AND ', $conditions));
 	
@@ -103,14 +113,14 @@ $app->patch('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
 	
 	$result = $db->executeSync($preparedData['id'], $bind);
 	
-	$app->response->write(json_encode($result->getData()));
+	$response->write(json_encode($result->getData()));
 });
 
-$app->post('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
-	$db->setKeyspace($keyspace);
-	$data = $app->request->post();
+$app->post('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
+	$db->setKeyspace($args['keyspace']);
+	$data = $request->getParsedBody();
 	
-	$query = FluentCQL\Query::insertInto($table)
+	$query = FluentCQL\Query::insertInto($args['table'])
 		->clause('(' . \implode(', ', \array_keys($data)) . ')')
 		->values('(' . \implode(', ', \array_fill(0, count($data), '?')) . ')');
 	
@@ -125,18 +135,18 @@ $app->post('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
 	
 	$result = $db->executeSync($preparedData['id'], $bind);
 	
-	$app->response->write(json_encode($result->getData()));
+	$response->write(json_encode($result->getData()));
 });
 
-$app->delete('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
-	$db->setKeyspace($keyspace);
-	$params = $app->request->get();
+$app->delete('/{keyspace}/{table}', function ($request, $response, $args) use ($app, $db) {
+	$db->setKeyspace($args['keyspace']);
+	$params = $request->getQueryParams();
 	
 	$conditions = [];
 	foreach($params as $columnName => $value)
 		$conditions[] = $columnName . ' = ?';
 	
-	$select = FluentCQL\Query::delete()->from($table);
+	$select = FluentCQL\Query::delete()->from($args['table']);
 	
 	$preparedData = $db->prepare($select->assemble());
 	$bind = [];
@@ -148,7 +158,7 @@ $app->delete('/:keyspace/:table', function ($keyspace, $table) use ($app, $db) {
 	
 	$result = $db->executeSync($preparedData['id'], $bind);
 	
-	$app->response->write(json_encode($result->getData()));
+	$response->write(json_encode($result->getData()));
 });
 
 $app->run();
